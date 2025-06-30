@@ -6,16 +6,6 @@ This is the React frontend for the Magic: The Gathering card manager app.
 
 In the project directory, you can run:
 
-- `npm start` — Runs the app in development mode.
-- `npm run build` — Builds the app for production.
-- `npm test` — Launches the test runner.
-
-The app will connect to the backend Node/Express server for card data.
-
-## Available Scripts
-
-In the project directory, you can run:
-
 ### `npm start`
 
 Runs the app in the development mode.\
