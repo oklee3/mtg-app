@@ -1,0 +1,53 @@
+body {
+  background: #181818;
+}
+
+.home-container {
+  width: 100%;
+  padding-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Fira Mono', 'Consolas', 'Courier New', monospace;
+  background: none;
+  color: #c0c0c0;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+}
+
+.home-title {
+  font-size: 2rem;
+  color: #b0b0b0;
+  margin-bottom: 1rem;
+  letter-spacing: 1.5px;
+  text-shadow: 0 1px 4px #1118;
+  text-align: center;
+}
+
+.home-desc {
+  font-size: 1.1rem;
+  color: #a0a0a0;
+  margin-bottom: 0;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.home-card-images {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 4rem;
+}
+
+.home-card-image-placeholder {
+  width: 11rem;
+  height: 15.4rem;
+  background: #232323;
+  border: 2px dashed #444;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0005;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
