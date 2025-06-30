@@ -1,17 +1,26 @@
 .mtg-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 1rem;
-  width: 200px;
-  background: #fafafa;
+  width: 14.5rem;
+  height: 21rem;
+  background: #222;
+  border-radius: 1rem;
+  box-shadow: 0 0.125rem 0.75rem rgba(0,0,0,0.25);
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  margin: 0.5rem;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.2s;
 }
-
-.mtg-card-image {
+.mtg-card:hover {
+  box-shadow: 0 0.25rem 1.5rem rgba(0,0,0,0.35);
+}
+.mtg-card-image.large {
   width: 100%;
-  border-radius: 4px;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.7rem;
+  transition: transform 0.2s;
 }
 
 .mtg-card-name {
@@ -31,19 +40,169 @@
 
 .mtg-card-flip-btn {
   margin-top: 0.7rem;
-  padding: 0.3rem 1.1rem;
-  border-radius: 8px;
-  border: none;
-  background: #3383b9;
+  padding: 0.4rem 1.2rem;
+  background: #333;
   color: #fff;
-  font-size: 0.97rem;
-  font-weight: 500;
-  box-shadow: 0 2px 8px #0003;
+  border: none;
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  font-size: 1.1rem;
+  transition: background 0.2s;
 }
-.mtg-card-flip-btn:hover, .mtg-card-flip-btn:focus {
-  background: #1b6e72;
-  box-shadow: 0 4px 16px #0005;
-  transform: translateY(-2px) scale(1.03);
+.mtg-card-flip-btn:hover {
+  background: #444;
+}
+
+/* Modal overlay and window */
+.mtg-card-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mtg-card-modal {
+  background: #181818;
+  border-radius: 1.2rem;
+  box-shadow: 0 0.5rem 2rem rgba(0,0,0,0.45);
+  padding: 2.2rem 1.5rem 1.5rem 1.5rem;
+  max-width: 34rem;
+  width: 98vw;
+  max-height: 92vh;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+.mtg-card-modal-close {
+  position: absolute;
+  top: 0.8rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2.2rem;
+  cursor: pointer;
+  z-index: 10;
+}
+.mtg-card-modal-image {
+  width: 100%;
+  max-width: 15.5rem;
+  height: auto;
+  border-radius: 0.7rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 0.125rem 1rem rgba(0,0,0,0.25);
+  flex-shrink: 0;
+}
+.mtg-card-modal-info {
+  color: #f3f3f3;
+  width: 100%;
+  font-size: 1.15rem;
+  margin-left: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.mtg-card-modal-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.6rem;
+}
+.mtg-card-modal-type {
+  color: #bdbdbd;
+  margin-bottom: 0.8rem;
+}
+.mtg-card-modal-set {
+  color: #bdbdbd;
+  margin-bottom: 1rem;
+}
+.mtg-card-modal-mana {
+  margin-bottom: 0.6rem;
+}
+.mtg-card-modal-oracle {
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+.mtg-card-modal-rarity {
+  margin-bottom: 1.5rem;
+}
+.mtg-card-modal-legalities {
+  margin-bottom: 0.2rem;
+}
+.mtg-card-modal-prices {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 0.5rem 0 1.2rem 0;
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: #e2e2e2;
+}
+.mtg-card-price-label {
+  margin-right: 0.5rem;
+}
+.mtg-card-price-value {
+  font-weight: bold;
+  color: #3ec46d;
+}
+
+.mtg-card-modal-prices-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: flex-start;
+  margin: 0.5rem 0 1.2rem 0;
+}
+
+/* Add padding to card results container to move cards away from the edge */
+.card-search-results {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.mtg-card-flip-icon {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(30,30,30,0.85);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.18s, transform 0.15s;
+}
+.mtg-card-flip-icon:hover {
+  background: #444;
+  transform: scale(1.08);
+}
+
+.mtg-card-flip-icon-modal {
+  z-index: 3;
+  font-size: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.legal-status-legal {
+  color: #3ec46d;
+  font-weight: bold;
+}
+.legal-status-not-legal {
+  color: #e74c3c;
+  font-weight: bold;
 } 
