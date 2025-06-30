@@ -1,15 +1,15 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import './Navbar.css';
 
 function Navbar() {
   return (
     <nav className="navbar">
-      <span className="navbar-title">MTG App</span>
-      <Link to="/" className="navbar-link">Home</Link>
-      <Link to="/search" className="navbar-link">Card Search</Link>
+      <NavLink to="/" className="navbar-title">MTG CounterTop</NavLink>
+      <NavLink to="/" className={({ isActive }) => 'navbar-link' + (isActive ? ' active' : '')}>Home</NavLink>
+      <NavLink to="/search" className={({ isActive }) => 'navbar-link' + (isActive ? ' active' : '')}>Card Search</NavLink>
       <a href="#" className="navbar-link">Deckbuilder</a>
-      <a href="#" className="navbar-link">Game</a>
+      <a href="#" className="navbar-link">Guess the Art</a>
     </nav>
   );
 }

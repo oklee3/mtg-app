@@ -5,6 +5,7 @@
   display: flex;
   gap: 2rem;
   align-items: center;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .navbar-title {
@@ -19,4 +20,8 @@
 
 .navbar-link:hover {
   text-decoration: underline;
+}
+
+.navbar-link.active {
+  font-weight: bold;
 } 

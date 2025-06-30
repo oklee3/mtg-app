@@ -6,10 +6,26 @@ const router = express.Router();
 // Get all cards or search by name
 router.get('/', async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name, color, type, cmc, legality } = req.query;
     let query = {};
     if (name) {
       query.name = { $regex: name, $options: 'i' };
+    }
+    if (color) {
+      // Accept comma-separated or array
+      const colors = Array.isArray(color) ? color : color.split(',');
+      query.colors = { $all: colors };
+    }
+    if (type) {
+      query.type_line = { $regex: type, $options: 'i' };
+    }
+    if (cmc) {
+      // Support both string and number
+      query.cmc = Number(cmc);
+    }
+    if (legality) {
+      const legalityKey = `legalities.${legality}`;
+      query[legalityKey] = 'legal';
     }
     const cards = await Card.find(query);
     res.json(cards);

@@ -1,0 +1,32 @@
+.bottom-bar {
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  background: rgba(24, 24, 24, 0.97);
+  color: #b0b0b0;
+  font-size: 0.85rem;
+  padding: 0.7rem 1.5rem 0.7rem 1.5rem;
+  box-shadow: 0 -2px 8px #0005;
+  text-align: left;
+  z-index: 100;
+}
+
+.bottom-bar-text {
+  width: 100%;
+  line-height: 1.5;
+}
+
+.bottom-bar a {
+  color: #2c9ea0;
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .bottom-bar {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  }
+  .bottom-bar-text {
+    max-width: 100%;
+  }
+}
