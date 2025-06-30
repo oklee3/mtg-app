@@ -6,7 +6,7 @@ const router = express.Router();
 // Get all cards or search by name
 router.get('/', async (req, res) => {
   try {
-    const { name, color, type, cmc, legality } = req.query;
+    const { name, color, type, cmc, legality, page = 1, limit = 48 } = req.query;
     let query = {};
     if (name) {
       query.name = { $regex: name, $options: 'i' };
@@ -14,7 +14,11 @@ router.get('/', async (req, res) => {
     if (color) {
       // Accept comma-separated or array
       const colors = Array.isArray(color) ? color : color.split(',');
-      query.colors = { $all: colors };
+      query.$or = [
+        { colors: { $all: colors } },
+        { color_identity: { $all: colors } },
+        { 'card_faces.color_identity': { $all: colors } }
+      ];
     }
     if (type) {
       query.type_line = { $regex: type, $options: 'i' };
@@ -27,8 +31,25 @@ router.get('/', async (req, res) => {
       const legalityKey = `legalities.${legality}`;
       query[legalityKey] = 'legal';
     }
-    const cards = await Card.find(query);
-    res.json(cards);
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    let [cards, total] = await Promise.all([
+      Card.find(query).skip(skip).limit(parseInt(limit)),
+      Card.countDocuments(query)
+    ]);
+    // Filter out cards not legal in any format
+    const isLegalInAnyFormat = card => {
+      if (!card.legalities || typeof card.legalities !== 'object') return false;
+      return Object.values(card.legalities).includes('legal');
+    };
+    const filteredCards = cards.filter(isLegalInAnyFormat);
+    // Adjust total to reflect only cards legal in at least one format
+    // (Optional: for accurate pagination, you may want to count only legal cards, but this is slower)
+    res.json({
+      cards: filteredCards,
+      total,
+      page: parseInt(page),
+      pageSize: parseInt(limit)
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

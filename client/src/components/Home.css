@@ -90,7 +90,7 @@ body {
 }
 
 .home-link:hover, .home-link:focus {
-  background: #2c9ea0;
+  background: #3383b9;
   color: #fff;
   box-shadow: 0 4px 16px #0005;
   transform: translateY(-2px) scale(1.03);

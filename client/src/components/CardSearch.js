@@ -29,6 +29,9 @@ function CardSearch() {
     cmc: '',
     legality: '',
   });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(48);
 
   const handleColorChange = (color) => {
     setPendingFilters((prev) => ({
@@ -55,11 +58,14 @@ function CardSearch() {
     setCmc(pendingFilters.cmc);
     setLegality(pendingFilters.legality);
     setShowAdvanced(false);
-    // Optionally trigger search here
+    setTimeout(() => {
+      setPage(1);
+      handleSearch(1);
+    }, 0);
   };
 
-  const handleSearch = async (e) => {
-    if (e) e.preventDefault();
+  const handleSearch = async (pageOverride) => {
+    const pageToFetch = pageOverride || page;
     if (!query.trim() && !selectedColors.length && !type && !cmc && !legality) return;
     setLoading(true);
     setError('');
@@ -71,12 +77,19 @@ function CardSearch() {
       if (type) params.append('type', type);
       if (cmc) params.append('cmc', cmc);
       if (legality) params.append('legality', legality);
+      params.append('page', pageToFetch);
+      params.append('limit', pageSize);
       const res = await fetch(`/api/cards?${params.toString()}`);
       const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
+      if (!data.cards || !Array.isArray(data.cards) || data.cards.length === 0) {
         setError('No results found.');
+        setResults([]);
+        setTotal(0);
       } else {
-        setResults(data);
+        setResults(data.cards);
+        setTotal(data.total);
+        setPage(data.page);
+        setPageSize(data.pageSize);
       }
     } catch (err) {
       setError('Error fetching cards.');
@@ -85,10 +98,15 @@ function CardSearch() {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    handleSearch(newPage);
+  };
+
   return (
     <div className="card-search-container home-container">
       <h2 className="home-title">Card Search</h2>
-      <form onSubmit={handleSearch} className="card-search-form">
+      <form onSubmit={e => { e.preventDefault(); setPage(1); handleSearch(1); }} className="card-search-form">
         <input
           type="text"
           value={query}
@@ -98,11 +116,11 @@ function CardSearch() {
         />
         <button type="submit" className="card-search-button home-link">Search</button>
       </form>
-      <button className="advanced-search-btn" onClick={openAdvanced} type="button">Advanced Search</button>
+      <button className="advanced-search-btn" onClick={openAdvanced} type="button">Advanced Filters</button>
       {showAdvanced && (
         <div className="advanced-search-modal">
           <div className="advanced-search-content">
-            <h3>Advanced Search</h3>
+            <h3>Advanced Filters</h3>
             <div className="card-search-filter-group">
               <span className="card-search-filter-label">Color:</span>
               {COLOR_OPTIONS.map(opt => (
@@ -164,6 +182,29 @@ function CardSearch() {
           <Card key={card.id} card={card} />
         ))}
       </div>
+      {(total > pageSize) && (
+        <div className="card-search-pagination" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <button
+            className="card-search-pagination-btn"
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page <= 1}
+            style={{ marginRight: 8 }}
+          >
+            Previous
+          </button>
+          <span style={{ alignSelf: 'center' }}>
+            Page {page} of {Math.ceil(total / pageSize)}
+          </span>
+          <button
+            className="card-search-pagination-btn"
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page >= Math.ceil(total / pageSize)}
+            style={{ marginLeft: 8 }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
