@@ -36,15 +36,17 @@ body {
 .home-card-images {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 2rem;
   margin-top: 2rem;
+  position: relative;
 }
 
 .home-card-image-placeholder {
   width: 16rem;
   height: 22.4rem;
   background: #232323;
-  border: 2px dashed #444;
+  border: 2px groove #444;
   border-radius: 8px;
   box-shadow: 0 2px 8px #0005;
   display: flex;
@@ -111,4 +113,120 @@ body {
   .home-container {
     padding-bottom: 4.2rem;
   }
+}
+
+.clickable-card:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+.random-cards-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.5rem;
+  position: absolute;
+  top: 75%;
+  left: 85%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 2rem;
+  border-radius: 0.8rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  height: fit-content;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.loading-cards {
+  color: #fff;
+  font-style: italic;
+  padding: 0.5rem;
+}
+
+.random-card-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  position: relative;
+  cursor: grab;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.random-card-item:hover {
+  transform: translateY(-0.2rem);
+}
+
+.random-card-item.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg) scale(1.05);
+  cursor: grabbing;
+}
+
+.random-card-image {
+  width: 11rem;
+  height: auto;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.random-card-image:hover {
+  transform: scale(1.1);
+}
+
+.random-card-controls {
+  display: flex;
+  flex-direction: row;
+  gap: 0.3rem;
+}
+
+.reorder-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.reorder-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.close-random-cards-btn {
+  position: absolute;
+  top: -1rem;
+  right: -1rem;
+  background: #e74c3c;
+  border: none;
+  color: #fff;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.close-random-cards-btn:hover {
+  background: #c0392b;
 }

@@ -55,6 +55,41 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get random cards that are legal in at least one format
+router.get('/random', async (req, res) => {
+  try {
+    const { count = 3 } = req.query;
+    const randomCount = parseInt(count);
+    
+    const cards = await Card.aggregate([
+      {
+        $match: {
+          $expr: {
+            $gt: [
+              { $size: {
+                $filter: {
+                  input: { $objectToArray: "$legalities" },
+                  as: "legality",
+                  cond: { $eq: ["$$legality.v", "legal"] }
+                }
+              } },
+              0
+            ]
+          }
+        }
+      },
+      { $sample: { size: randomCount } }
+    ]);
+    
+    res.json({
+      cards: cards,
+      count: cards.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get a card by ID
 router.get('/:id', async (req, res) => {
   try {
