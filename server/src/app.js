@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const connectDB = require('./db');
 const cardsRouter = require('./routes/cards');
+const gameRouter = require('./routes/game');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 connectDB();
 
 app.use('/api/cards', cardsRouter);
+app.use('/api/game', gameRouter);
 
 const PORT = process.env.PORT || 5001;
 

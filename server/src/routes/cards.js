@@ -3,53 +3,93 @@ const Card = require('../models/Card');
 
 const router = express.Router();
 
-// Get all cards or search by name
+// Get all cards or search by name (earliest printing per oracle_id)
 router.get('/', async (req, res) => {
   try {
     const { name, color, type, cmc, legality, page = 1, limit = 48 } = req.query;
-    let query = {};
+    let match = {};
     if (name) {
-      query.name = { $regex: name, $options: 'i' };
+      match.name = { $regex: name, $options: 'i' };
     }
     if (color) {
       // Accept comma-separated or array
       const colors = Array.isArray(color) ? color : color.split(',');
-      query.$or = [
+      match.$or = [
         { colors: { $all: colors } },
         { color_identity: { $all: colors } },
         { 'card_faces.color_identity': { $all: colors } }
       ];
     }
     if (type) {
-      query.type_line = { $regex: type, $options: 'i' };
+      match.type_line = { $regex: type, $options: 'i' };
     }
     if (cmc) {
-      // Support both string and number
-      query.cmc = Number(cmc);
+      match.cmc = Number(cmc);
     }
     if (legality) {
       const legalityKey = `legalities.${legality}`;
-      query[legalityKey] = 'legal';
+      match[legalityKey] = 'legal';
     }
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    let [cards, total] = await Promise.all([
-      Card.find(query).skip(skip).limit(parseInt(limit)),
-      Card.countDocuments(query)
-    ]);
-    // Filter out cards not legal in any format
-    const isLegalInAnyFormat = card => {
-      if (!card.legalities || typeof card.legalities !== 'object') return false;
-      return Object.values(card.legalities).includes('legal');
+    // Only legal in at least one format
+    match.$expr = {
+      $gt: [
+        { $size: {
+          $filter: {
+            input: { $objectToArray: "$legalities" },
+            as: "legality",
+            cond: { $eq: ["$$legality.v", "legal"] }
+          }
+        } },
+        0
+      ]
     };
-    const filteredCards = cards.filter(isLegalInAnyFormat);
-    // Adjust total to reflect only cards legal in at least one format
-    // (Optional: for accurate pagination, you may want to count only legal cards, but this is slower)
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Aggregate for earliest printing per oracle_id
+    const pipeline = [
+      { $match: match },
+      { $sort: { oracle_id: 1, released_at: 1 } },
+      {
+        $group: {
+          _id: "$oracle_id",
+          card: { $first: "$$ROOT" }
+        }
+      },
+      { $replaceRoot: { newRoot: "$card" } },
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ];
+    const cards = await Card.aggregate(pipeline);
+    // For total count
+    const countPipeline = [
+      { $match: match },
+      { $sort: { oracle_id: 1, released_at: 1 } },
+      {
+        $group: {
+          _id: "$oracle_id",
+          card: { $first: "$$ROOT" }
+        }
+      },
+      { $count: "total" }
+    ];
+    const countResult = await Card.aggregate(countPipeline);
+    const total = countResult[0]?.total || 0;
     res.json({
-      cards: filteredCards,
+      cards,
       total,
       page: parseInt(page),
       pageSize: parseInt(limit)
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all printings for a given oracle_id
+router.get('/printings/:oracle_id', async (req, res) => {
+  try {
+    const { oracle_id } = req.params;
+    const printings = await Card.find({ oracle_id }).sort({ released_at: 1 });
+    res.json({ printings });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

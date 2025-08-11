@@ -68,7 +68,7 @@ function Home() {
       <div className="home-links">
         <Link to="/search" className="home-link">Search for cards</Link>
         <Link to="/deckbuilder" className="home-link">Build decks</Link>
-        <Link to="/game" className="home-link">Art Guessing Game</Link>
+        <Link to="/game" className="home-link">Wordle Game</Link>
       </div>
       <div className="home-card-images">
         <div className="home-card-image-placeholder">
@@ -89,24 +89,29 @@ function Home() {
               <div className="loading-cards">Loading cards...</div>
             ) : (
               <>
-                {randomCards.map((card, index) => (
-                  <div 
-                    key={card.id} 
-                    className={`random-card-item ${draggedIndex === index ? 'dragging' : ''}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, index)}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <img 
-                      src={card.image_uris?.normal || card.image_uris?.normal} 
-                      alt={card.name} 
-                      className="random-card-image"
-                      draggable={false}
-                    />
-                  </div>
-                ))}
+                {randomCards.map((card, index) => {
+                  const face = Array.isArray(card.card_faces) && card.card_faces.length > 0
+                    ? card.card_faces[0]
+                    : card;
+                  return (
+                    <div 
+                      key={card.id} 
+                      className={`random-card-item ${draggedIndex === index ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <img 
+                        src={face.image_uris?.normal || card.image_uris?.normal} 
+                        alt={face.name || card.name} 
+                        className="random-card-image"
+                        draggable={false}
+                      />
+                    </div>
+                  );
+                })}
                 <button 
                   onClick={handleCloseRandomCards}
                   className="close-random-cards-btn"

@@ -9,7 +9,7 @@ function Navbar() {
       <NavLink to="/" className={({ isActive }) => 'navbar-link' + (isActive ? ' active' : '')}>Home</NavLink>
       <NavLink to="/search" className={({ isActive }) => 'navbar-link' + (isActive ? ' active' : '')}>Card Search</NavLink>
       <a href="#" className="navbar-link">Deckbuilder</a>
-      <a href="#" className="navbar-link">Guess the Art</a>
+      <NavLink to="/game" className={({ isActive }) => 'navbar-link' + (isActive ? ' active' : '')}>MTG Wordle</NavLink>
     </nav>
   );
 }
