@@ -18,11 +18,6 @@ function Game() {
     fetchDailyCard();
   }, []);
 
-  // Debug: Monitor game state changes
-  useEffect(() => {
-    console.log('Game state changed - gameWon:', gameWon, 'gameLost:', gameLost);
-  }, [gameWon, gameLost]);
-
   const fetchDailyCard = async () => {
     try {
       const response = await fetch('/api/game/daily');
@@ -30,11 +25,32 @@ function Game() {
         throw new Error('Failed to fetch daily card');
       }
       const data = await response.json();
-      console.log('Daily card data:', data);
       setDailyCard(data);
     } catch (err) {
       setError('Failed to load daily card. Please try again later.');
       console.error('Error fetching daily card:', err);
+    }
+  };
+
+  const fetchNewDailyCard = async () => {
+    try {
+      // Reset game state
+      setGuesses([]);
+      setAttempts(0);
+      setGameWon(false);
+      setGameLost(false);
+      setCurrentGuess('');
+      setError('');
+      
+      const response = await fetch('/api/game/daily/test');
+      if (!response.ok) {
+        throw new Error('Failed to fetch new daily card');
+      }
+      const data = await response.json();
+      setDailyCard(data);
+    } catch (err) {
+      setError('Failed to load new daily card. Please try again later.');
+      console.error('Error fetching new daily card:', err);
     }
   };
 
@@ -91,12 +107,6 @@ function Game() {
 
       const data = await response.json();
       
-      console.log('API Response:', data);
-      console.log('Guessed card set info:', data.guessedCard.set_name, data.guessedCard.released_at);
-      console.log('Daily card set info:', data.dailyCard.set_name, data.dailyCard.released_at);
-      console.log('isCorrect:', data.isCorrect);
-      console.log('Current attempts:', attempts);
-      
       // Create the guess object with feedback
       const newGuess = {
         ...data.guessedCard,
@@ -105,7 +115,6 @@ function Game() {
       };
 
       const newAttempts = attempts + 1;
-      console.log('New attempts:', newAttempts);
       
       setGuesses([...guesses, newGuess]);
       setAttempts(newAttempts);
@@ -113,12 +122,9 @@ function Game() {
       setSuggestions([]);
       setShowSuggestions(false);
 
-      console.log('About to check win condition...');
       if (data.isCorrect) {
-        console.log('Setting game won to true!');
         setGameWon(true);
       } else if (newAttempts >= 10) {
-        console.log('Setting game lost to true!');
         setGameLost(true);
       }
     } catch (err) {
@@ -136,7 +142,33 @@ function Game() {
     }
     
     if (property === 'cmc') {
-      return Number(guessValue) === Number(targetValue) ? 'correct' : 'incorrect';
+      if (guessValue.exact) return 'correct';
+      if (guessValue.close) return 'close';
+      return 'incorrect';
+    }
+    
+    if (property === 'colors') {
+      if (guessValue.exact) return 'correct';
+      if (guessValue.overlap) return 'close';
+      return 'incorrect';
+    }
+    
+    if (property === 'type_line') {
+      if (guessValue.exact) return 'correct';
+      if (guessValue.overlap) return 'close';
+      return 'incorrect';
+    }
+    
+    if (property === 'rarity') {
+      if (guessValue.exact) return 'correct';
+      if (guessValue.close) return 'close';
+      return 'incorrect';
+    }
+    
+    if (property === 'released_at') {
+      if (guessValue.exact) return 'correct';
+      if (guessValue.close) return 'close';
+      return 'incorrect';
     }
     
     if (Array.isArray(targetValue)) {
@@ -146,6 +178,27 @@ function Game() {
     }
     
     return guessValue === targetValue ? 'correct' : 'incorrect';
+  };
+
+  const getDirectionalIndicator = (property, guessValue) => {
+    if (!guessValue || typeof guessValue !== 'object') return '';
+    
+    if (property === 'cmc') {
+      if (guessValue.exact) return '';
+      return guessValue.direction === 'higher' ? ' ↓' : ' ↑';
+    }
+    
+    if (property === 'rarity') {
+      if (guessValue.exact) return '';
+      return guessValue.direction === 'higher' ? ' ↓' : ' ↑';
+    }
+    
+    if (property === 'released_at') {
+      if (guessValue.exact) return '';
+      return guessValue.direction === 'newer' ? ' ↓' : ' ↑';
+    }
+    
+    return '';
   };
 
   const renderGuessRow = (guess, index) => {
@@ -173,22 +226,22 @@ function Game() {
         <div className={`guess-cell name ${getFeedbackColor('name', guess.name, dailyCard.name)}`}>
           {guess.name}
         </div>
-        <div className={`guess-cell cmc ${getFeedbackColor('cmc', guess.cmc, dailyCard.cmc)}`}>
-          {guess.cmc}
+        <div className={`guess-cell cmc ${getFeedbackColor('cmc', guess.feedback?.cmc, dailyCard.cmc)}`}>
+          {guess.cmc}{getDirectionalIndicator('cmc', guess.feedback?.cmc)}
         </div>
-        <div className={`guess-cell colors ${getFeedbackColor('colors', guess.colors, dailyCard.colors)}`}>
+        <div className={`guess-cell colors ${getFeedbackColor('colors', guess.feedback?.colors, dailyCard.colors)}`}>
           {Array.isArray(guess.colors) ? guess.colors.join('') : guess.colors}
         </div>
-        <div className={`guess-cell type ${getFeedbackColor('type_line', guess.type_line, dailyCard.type_line)}`}>
+        <div className={`guess-cell type ${getFeedbackColor('type_line', guess.feedback?.type_line, dailyCard.type_line)}`}>
           {guess.type_line}
         </div>
-        <div className={`guess-cell rarity ${getFeedbackColor('rarity', guess.rarity, dailyCard.rarity)}`}>
-          {guess.rarity}
+        <div className={`guess-cell rarity ${getFeedbackColor('rarity', guess.feedback?.rarity, dailyCard.rarity)}`}>
+          {guess.rarity}{getDirectionalIndicator('rarity', guess.feedback?.rarity)}
         </div>
-        <div className={`guess-cell set ${getFeedbackColor('set_name', guess.set_name, dailyCard.set_name)}`}>
+        <div className={`guess-cell set ${getFeedbackColor('released_at', guess.feedback?.released_at, dailyCard.released_at)}`}>
           <div className="set-info">
             <div className="set-name">{guess.set_name}</div>
-            <div className="set-date">{formatReleaseDate(guess.released_at)}</div>
+            <div className="set-date">{formatReleaseDate(guess.released_at)}{getDirectionalIndicator('released_at', guess.feedback?.released_at)}</div>
           </div>
         </div>
       </div>
@@ -230,22 +283,13 @@ function Game() {
       <div className="game-header">
         <h1 className="game-title">Guess the Card</h1>
         <p className="game-subtitle">A Magic: The Gathering Wordle variant</p>
-      </div>
-
-      <div className="game-board">
-        <div className="game-board-header">
-          <div className="header-cell">Name</div>
-          <div className="header-cell">CMC</div>
-          <div className="header-cell">Colors</div>
-          <div className="header-cell">Type</div>
-          <div className="header-cell">Rarity</div>
-          <div className="header-cell">Set</div>
-        </div>
-        
-        <div className="game-board-body">
-          {guesses.map((guess, index) => renderGuessRow(guess, index))}
-          {renderEmptyRows()}
-        </div>
+        <button 
+          onClick={fetchNewDailyCard} 
+          className="test-reset-btn"
+          title="Test button: Reselect daily card"
+        >
+          New Daily Card (Test)
+        </button>
       </div>
 
       {error && (
@@ -291,6 +335,22 @@ function Game() {
           </div>
         </form>
       )}
+
+      <div className="game-board">
+        <div className="game-board-header">
+          <div className="header-cell">Name</div>
+          <div className="header-cell">CMC</div>
+          <div className="header-cell">Colors</div>
+          <div className="header-cell">Type</div>
+          <div className="header-cell">Rarity</div>
+          <div className="header-cell">Set</div>
+        </div>
+        
+        <div className="game-board-body">
+          {guesses.map((guess, index) => renderGuessRow(guess, index))}
+          {renderEmptyRows()}
+        </div>
+      </div>
 
       {gameWon && (
         <div className="game-result won">
@@ -352,9 +412,10 @@ function Game() {
         <h3>How to Play:</h3>
         <ul>
           <li>Guess the Magic card in 10 attempts</li>
-          <li><span className="correct-example">Green</span> = Correct property</li>
-          <li><span className="incorrect-example">Red</span> = Incorrect property</li>
-          <li>Compare: Name, CMC, Colors, Type, and Rarity</li>
+          <li><span className="correct-example">Green</span> = Exact match</li>
+          <li><span className="close-example">Yellow</span> = CMC within 2, Any color overlap, any type overlap, Rarity within 1 level, Same year</li>
+          <li><span className="incorrect-example">Red</span> = Incorrect</li>
+          <li><strong>Arrows point to the actual card:</strong> ↑ is 'higher', ↓ is 'lower'</li>
         </ul>
       </div>
     </div>

@@ -5,6 +5,7 @@ const router = express.Router();
 // Cache for daily card to avoid recalculating on every request
 let dailyCardCache = null;
 let dailyCardCacheDate = null;
+let testCardCache = null; // Cache for test cards
 
 // Helper function to get today's daily card
 const getDailyCard = async () => {
@@ -20,21 +21,34 @@ const getDailyCard = async () => {
   // Use day of year as seed for consistent daily card selection
   const seed = dayOfYear + today.getFullYear() * 1000;
   
-  // Get all cards legal in Vintage or Commander and sort them consistently
-  const allCards = await Card.find({
-    $or: [
-      { 'legalities.vintage': 'legal' },
-      { 'legalities.commander': 'legal' }
-    ]
-  }).select('name cmc colors type_line rarity oracle_id image_uris card_faces set_name released_at').sort({ oracle_id: 1, released_at: 1 });
+  // Get all unique card names that are legal in Vintage or Commander
+  const uniqueCards = await Card.aggregate([
+    {
+      $match: {
+        $or: [
+          { 'legalities.vintage': 'legal' },
+          { 'legalities.commander': 'legal' }
+        ]
+      }
+    },
+    { $sort: { name: 1, released_at: 1 } },
+    {
+      $group: {
+        _id: "$name",
+        oldestCard: { $first: "$$ROOT" }
+      }
+    },
+    { $replaceRoot: { newRoot: "$oldestCard" } },
+    { $sort: { name: 1 } }
+  ]);
   
-  if (allCards.length === 0) {
+  if (uniqueCards.length === 0) {
     throw new Error('No cards found');
   }
   
   // Use seed to consistently select the same card for the day
-  const cardIndex = seed % allCards.length;
-  const dailyCard = allCards[cardIndex];
+  const cardIndex = seed % uniqueCards.length;
+  const dailyCard = uniqueCards[cardIndex];
   
   // Cache the result
   dailyCardCache = dailyCard;
@@ -43,10 +57,117 @@ const getDailyCard = async () => {
   return dailyCard;
 };
 
+// Helper function to get the current active card (daily or test)
+const getCurrentCard = async () => {
+  // If there's a test card, use that; otherwise use the daily card
+  if (testCardCache) {
+    return testCardCache;
+  }
+  return await getDailyCard();
+};
+
+// Helper function to get rarity value for comparison
+const getRarityValue = (rarity) => {
+  const rarityMap = { 'common': 1, 'uncommon': 2, 'rare': 3, 'mythic': 4 };
+  return rarityMap[rarity?.toLowerCase()] || 0;
+};
+
+// Helper function to get release year
+const getReleaseYear = (dateString) => {
+  if (!dateString) return 0;
+  return new Date(dateString).getFullYear();
+};
+
+// Helper function to check color overlap
+const getColorOverlap = (guessColors, targetColors) => {
+  if (!Array.isArray(guessColors) || !Array.isArray(targetColors)) return { exact: false, overlap: false };
+  
+  const guessSet = new Set(guessColors);
+  const targetSet = new Set(targetColors);
+  
+  const exact = JSON.stringify(guessColors.sort()) === JSON.stringify(targetColors.sort());
+  const overlap = guessColors.some(color => targetColors.includes(color)) || targetColors.some(color => guessColors.includes(color));
+  
+  return { exact, overlap };
+};
+
+// Helper function to check type overlap
+const getTypeOverlap = (guessType, targetType) => {
+  if (!guessType || !targetType) return { exact: false, overlap: false };
+  
+  const guessTypes = guessType.toLowerCase().split(' — ')[0].split(' ');
+  const targetTypes = targetType.toLowerCase().split(' — ')[0].split(' ');
+  
+  const exact = guessType.toLowerCase() === targetType.toLowerCase();
+  const overlap = guessTypes.some(type => targetTypes.includes(type)) || targetTypes.some(type => guessTypes.includes(type));
+  
+  return { exact, overlap };
+};
+
 // Get today's daily card (same card for all players on the same day)
 router.get('/daily', async (req, res) => {
   try {
+    // Clear test card cache when regular daily is requested
+    testCardCache = null;
+    
     const dailyCard = await getDailyCard();
+    
+    // Return only the properties needed for the game
+    res.json({
+      name: dailyCard.name,
+      cmc: dailyCard.cmc || 0,
+      colors: dailyCard.colors || [],
+      type_line: dailyCard.type_line || '',
+      rarity: dailyCard.rarity || '',
+      oracle_id: dailyCard.oracle_id,
+      image_uris: dailyCard.image_uris || null,
+      card_faces: dailyCard.card_faces || null,
+      set_name: dailyCard.set_name || '',
+      released_at: dailyCard.released_at || ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Test endpoint to clear cache and get a new daily card
+router.get('/daily/test', async (req, res) => {
+  try {
+    // Clear the cache to force a new card selection
+    dailyCardCache = null;
+    dailyCardCacheDate = null;
+    
+    // Get a truly random card for testing (not date-based)
+    const uniqueCards = await Card.aggregate([
+      {
+        $match: {
+          $or: [
+            { 'legalities.vintage': 'legal' },
+            { 'legalities.commander': 'legal' }
+          ]
+        }
+      },
+      { $sort: { name: 1, released_at: 1 } },
+      {
+        $group: {
+          _id: "$name",
+          oldestCard: { $first: "$$ROOT" }
+        }
+      },
+      { $replaceRoot: { newRoot: "$oldestCard" } },
+      { $sort: { name: 1 } }
+    ]);
+    
+    if (uniqueCards.length === 0) {
+      return res.status(404).json({ error: 'No cards found' });
+    }
+    
+    // Use random selection instead of date-based seed
+    const randomIndex = Math.floor(Math.random() * uniqueCards.length);
+    const dailyCard = uniqueCards[randomIndex];
+    
+    // Cache the test card
+    testCardCache = dailyCard;
     
     // Return only the properties needed for the game
     res.json({
@@ -75,20 +196,31 @@ router.post('/check', async (req, res) => {
       return res.status(400).json({ error: 'Guess is required' });
     }
     
-    // Search for the guessed card
-    const guessedCard = await Card.findOne({
-      name: { $regex: `^${guess.trim()}$`, $options: 'i' }
-    }).select('name cmc colors type_line rarity set_name released_at');
+    // Search for the guessed card (get oldest printing)
+    const guessedCards = await Card.aggregate([
+      {
+        $match: {
+          name: { $regex: `^${guess.trim()}$`, $options: 'i' }
+        }
+      },
+      { $sort: { released_at: 1 } },
+      {
+        $group: {
+          _id: "$name",
+          oldestCard: { $first: "$$ROOT" }
+        }
+      },
+      { $replaceRoot: { newRoot: "$oldestCard" } }
+    ]);
     
-    if (!guessedCard) {
+    if (guessedCards.length === 0) {
       return res.status(404).json({ error: 'Card not found' });
     }
     
-    // Get today's daily card for comparison
-    const dailyCard = await getDailyCard();
+    const guessedCard = guessedCards[0];
     
-    console.log('Daily card set info:', dailyCard.set_name, dailyCard.released_at);
-    console.log('Guessed card set info:', guessedCard.set_name, guessedCard.released_at);
+    // Get today's daily card for comparison
+    const dailyCard = await getCurrentCard();
     
     // Prepare the response with the guessed card and feedback
     const response = {
@@ -113,12 +245,24 @@ router.post('/check', async (req, res) => {
       isCorrect: guessedCard.name.toLowerCase() === dailyCard.name.toLowerCase(),
       feedback: {
         name: guessedCard.name.toLowerCase() === dailyCard.name.toLowerCase(),
-        cmc: (guessedCard.cmc || 0) === (dailyCard.cmc || 0),
-        colors: JSON.stringify((guessedCard.colors || []).sort()) === JSON.stringify((dailyCard.colors || []).sort()),
-        type_line: (guessedCard.type_line || '') === (dailyCard.type_line || ''),
-        rarity: (guessedCard.rarity || '') === (dailyCard.rarity || ''),
+        cmc: {
+          exact: (guessedCard.cmc || 0) === (dailyCard.cmc || 0),
+          close: Math.abs((guessedCard.cmc || 0) - (dailyCard.cmc || 0)) <= 2,
+          direction: (guessedCard.cmc || 0) > (dailyCard.cmc || 0) ? 'higher' : 'lower'
+        },
+        colors: getColorOverlap(guessedCard.colors, dailyCard.colors),
+        type_line: getTypeOverlap(guessedCard.type_line, dailyCard.type_line),
+        rarity: {
+          exact: (guessedCard.rarity || '') === (dailyCard.rarity || ''),
+          close: Math.abs(getRarityValue(guessedCard.rarity) - getRarityValue(dailyCard.rarity)) <= 1,
+          direction: getRarityValue(guessedCard.rarity) > getRarityValue(dailyCard.rarity) ? 'higher' : 'lower'
+        },
         set_name: (guessedCard.set_name || '') === (dailyCard.set_name || ''),
-        released_at: (guessedCard.released_at || '') === (dailyCard.released_at || '')
+        released_at: {
+          exact: (guessedCard.released_at || '') === (dailyCard.released_at || ''),
+          close: getReleaseYear(guessedCard.released_at) === getReleaseYear(dailyCard.released_at),
+          direction: getReleaseYear(guessedCard.released_at) > getReleaseYear(dailyCard.released_at) ? 'newer' : 'older'
+        }
       }
     };
     
@@ -137,7 +281,7 @@ router.get('/suggestions', async (req, res) => {
       return res.json({ suggestions: [] });
     }
     
-    // Use aggregation to get earliest printing per oracle_id, similar to card search
+    // Use aggregation to get oldest printing per card name
     const suggestions = await Card.aggregate([
       {
         $match: {
@@ -150,14 +294,14 @@ router.get('/suggestions', async (req, res) => {
           ]
         }
       },
-      { $sort: { oracle_id: 1, released_at: 1 } },
+      { $sort: { name: 1, released_at: 1 } },
       {
         $group: {
-          _id: "$oracle_id",
-          card: { $first: "$$ROOT" }
+          _id: "$name",
+          oldestCard: { $first: "$$ROOT" }
         }
       },
-      { $replaceRoot: { newRoot: "$card" } },
+      { $replaceRoot: { newRoot: "$oldestCard" } },
       { $sort: { name: 1 } },
       { $limit: 10 },
       { $project: { name: 1 } }

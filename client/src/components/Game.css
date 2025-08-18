@@ -27,6 +27,27 @@
   font-style: italic;
 }
 
+.test-reset-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #7c4a4a;
+  color: #ffffff;
+  border: 2px solid #7c4a4a;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.test-reset-btn:hover {
+  background: #6a3d3d;
+  border-color: #6a3d3d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px #0003;
+}
+
 .game-board {
   background: #232323;
   border: 2px groove #444;
@@ -88,6 +109,13 @@
   border-color: #4a7c4a;
   color: #ffffff;
   box-shadow: 0 0 8px #4a7c4a40;
+}
+
+.guess-cell.close {
+  background: #5a5a2d;
+  border-color: #7c7c4a;
+  color: #ffffff;
+  box-shadow: 0 0 8px #7c7c4a40;
 }
 
 .guess-cell.incorrect {
@@ -365,6 +393,11 @@
 
 .correct-example {
   color: #4a7c4a;
+  font-weight: bold;
+}
+
+.close-example {
+  color: #aaaa51;
   font-weight: bold;
 }
 
