@@ -18,7 +18,7 @@ connectDB();
 app.use('/api/cards', cardsRouter);
 app.use('/api/game', gameRouter);
 
-const clientBuildPath = path.join(__dirname, '../../client/build');
+const clientBuildPath = path.join(__dirname, '../client/build');
 app.use(express.static(clientBuildPath));
 
 app.get('*', (req, res) => {
