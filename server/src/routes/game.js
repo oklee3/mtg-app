@@ -10,52 +10,48 @@ let testCardCache = null; // Cache for test cards
 // Helper function to get today's daily card
 const getDailyCard = async () => {
   const today = new Date();
-  const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+  const dayOfYear = Math.floor(
+    (today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)
+  );
   const currentDate = today.getFullYear() * 1000 + dayOfYear;
-  
-  // Return cached card if it's from today
+
   if (dailyCardCache && dailyCardCacheDate === currentDate) {
     return dailyCardCache;
   }
-  
+
   // Use day of year as seed for consistent daily card selection
   const seed = dayOfYear + today.getFullYear() * 1000;
+
+  const matchQuery = {
+    $or: [
+      { 'legalities.vintage': 'legal' },
+      { 'legalities.commander': 'legal' }
+    ]
+  };
   
-  // Get all unique card names that are legal in Vintage or Commander
-  const uniqueCards = await Card.aggregate([
-    {
-      $match: {
-        $or: [
-          { 'legalities.vintage': 'legal' },
-          { 'legalities.commander': 'legal' }
-        ]
-      }
-    },
-    { $sort: { name: 1, released_at: 1 } },
-    {
-      $group: {
-        _id: "$name",
-        oldestCard: { $first: "$$ROOT" }
-      }
-    },
-    { $replaceRoot: { newRoot: "$oldestCard" } },
-    { $sort: { name: 1 } }
-  ]);
-  
-  if (uniqueCards.length === 0) {
-    throw new Error('No cards found');
+  const count = await Card.countDocuments(matchQuery);
+  if (count === 0) {
+    throw new Error("No cards found that are legal in Vintage or Commander");
   }
-  
-  // Use seed to consistently select the same card for the day
-  const cardIndex = seed % uniqueCards.length;
-  const dailyCard = uniqueCards[cardIndex];
-  
-  // Cache the result
+
+  // Pick "random" index for today
+  const skip = seed % count;
+
+  const dailyCard = await Card.findOne(matchQuery)
+    .sort({ name: 1, released_at: 1 })
+    .skip(skip)
+    .lean();
+
+  if (!dailyCard) {
+    throw new Error("Failed to fetch daily card");
+  }
+
   dailyCardCache = dailyCard;
   dailyCardCacheDate = currentDate;
-  
+
   return dailyCard;
 };
+
 
 // Helper function to get the current active card (daily or test)
 const getCurrentCard = async () => {
@@ -111,63 +107,6 @@ router.get('/daily', async (req, res) => {
     testCardCache = null;
     
     const dailyCard = await getDailyCard();
-    
-    // Return only the properties needed for the game
-    res.json({
-      name: dailyCard.name,
-      cmc: dailyCard.cmc || 0,
-      colors: dailyCard.colors || [],
-      type_line: dailyCard.type_line || '',
-      rarity: dailyCard.rarity || '',
-      oracle_id: dailyCard.oracle_id,
-      image_uris: dailyCard.image_uris || null,
-      card_faces: dailyCard.card_faces || null,
-      set_name: dailyCard.set_name || '',
-      released_at: dailyCard.released_at || ''
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Test endpoint to clear cache and get a new daily card
-router.get('/daily/test', async (req, res) => {
-  try {
-    // Clear the cache to force a new card selection
-    dailyCardCache = null;
-    dailyCardCacheDate = null;
-    
-    // Get a truly random card for testing (not date-based)
-    const uniqueCards = await Card.aggregate([
-      {
-        $match: {
-          $or: [
-            { 'legalities.vintage': 'legal' },
-            { 'legalities.commander': 'legal' }
-          ]
-        }
-      },
-      { $sort: { name: 1, released_at: 1 } },
-      {
-        $group: {
-          _id: "$name",
-          oldestCard: { $first: "$$ROOT" }
-        }
-      },
-      { $replaceRoot: { newRoot: "$oldestCard" } },
-      { $sort: { name: 1 } }
-    ]);
-    
-    if (uniqueCards.length === 0) {
-      return res.status(404).json({ error: 'No cards found' });
-    }
-    
-    // Use random selection instead of date-based seed
-    const randomIndex = Math.floor(Math.random() * uniqueCards.length);
-    const dailyCard = uniqueCards[randomIndex];
-    
-    // Cache the test card
-    testCardCache = dailyCard;
     
     // Return only the properties needed for the game
     res.json({

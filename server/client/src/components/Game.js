@@ -32,28 +32,6 @@ function Game() {
     }
   };
 
-  const fetchNewDailyCard = async () => {
-    try {
-      // Reset game state
-      setGuesses([]);
-      setAttempts(0);
-      setGameWon(false);
-      setGameLost(false);
-      setCurrentGuess('');
-      setError('');
-      
-      const response = await fetch('/api/game/daily/test');
-      if (!response.ok) {
-        throw new Error('Failed to fetch new daily card');
-      }
-      const data = await response.json();
-      setDailyCard(data);
-    } catch (err) {
-      setError('Failed to load new daily card. Please try again later.');
-      console.error('Error fetching new daily card:', err);
-    }
-  };
-
   const fetchSuggestions = async (query) => {
     if (query.length < 2) {
       setSuggestions([]);
@@ -283,13 +261,6 @@ function Game() {
       <div className="game-header">
         <h1 className="game-title">Guess the Card</h1>
         <p className="game-subtitle">A Magic: The Gathering Wordle variant</p>
-        <button 
-          onClick={fetchNewDailyCard} 
-          className="test-reset-btn"
-          title="Test button: Reselect daily card"
-        >
-          New Daily Card (Test)
-        </button>
       </div>
 
       {error && (
